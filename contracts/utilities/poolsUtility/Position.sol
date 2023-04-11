@@ -73,7 +73,7 @@ contract Position is Ownable, DSMath {
         uint256 posId
     ) public view returns (uint256 balance) {
         Position memory pos = positions[posId];
-        require(pos.isActive, "borrowBalanceOfPos: POS ISN'T ACTIVE");
+        require(pos.isActive, "borrowBalanceOfPos: POS ISN'T ACTIVE"); // @audit use error intead
 
         uint256 blockNum = pos.blockNum;
         address bathTokenQuote = bathHouseV2.getBathTokenFromAsset(pos.quote);
@@ -100,7 +100,7 @@ contract Position is Ownable, DSMath {
         require(
             openPosition(quote, asset, quotePayAmount, leverage),
             "buyAllAmountWithLeverage: FAILED TO OPEN POSITION"
-        );
+        ); // @audit use error intead
     }
 
     /// @notice open short position in Rubicon Market
