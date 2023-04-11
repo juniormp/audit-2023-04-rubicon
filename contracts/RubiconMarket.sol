@@ -1,8 +1,8 @@
 /// SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.9; // @audit-ok [low] use latest version dont use ^
 
 // Uncomment this line to use console.log
-// import "hardhat/console.sol";
+// import "hardhat/console.sol"; // @audit-ok should be removed and comments should follow the same NatSpec pattern
 
 /// @title RubiconMarket.sol
 /// @notice Please see the repository for this code at https://github.com/RubiconDeFi/rubicon-protocol-v1;
@@ -14,11 +14,20 @@ import "@openzeppelin/contracts/utils/StorageSlot.sol";
 /// @notice DSAuth events for authentication schema
 contract DSAuthEvents {
     /// event LogSetAuthority(address indexed authority); /// TODO: this event is not used in the contract, remove?
-    event LogSetOwner(address indexed owner);
+    event LogSetOwner(address indexed owner); // @audit-info this event can be moved to DSAuth class? 
 }
 
 /// @notice DSAuth library for setting owner of the contract
 /// @dev Provides the auth modifier for authenticated function calls
+/*
+    @audit-info 
+    This Solidity smart contract is a basic authorization contract called DSAuth, 
+    which defines a modifier called "auth" that can be applied to any function in the contract. 
+    The "auth" modifier checks whether the caller of the function is authorized by calling the 
+    "isAuthorized" function, which returns true if the caller is the owner of the contract, and false otherwise. 
+    The contract also includes a function called "setOwner" that allows the owner of the 
+    contract to set a new owner address.
+*/
 contract DSAuth is DSAuthEvents {
     address public owner;
 
@@ -27,13 +36,15 @@ contract DSAuth is DSAuthEvents {
         emit LogSetOwner(owner);
     }
 
-    modifier auth() {
-        require(isAuthorized(msg.sender), "ds-auth-unauthorized");
+    // @audit-info do not use open zepplin ownable lib or change the name to onlyOwner standard 
+    // pattern and delete isAutorazied internal function 
+    modifier auth() { // @audit-info should be private ?
+        require(isAuthorized(msg.sender), "ds-auth-unauthorized"); // @audit [gas] use error
         _;
     }
 
     function isAuthorized(address src) internal view returns (bool) {
-        if (src == owner) {
+        if (src == owner) { // @audit-info [gas] can use if ternary ?
             return true;
         } else {
             return false;
@@ -42,60 +53,71 @@ contract DSAuth is DSAuthEvents {
 }
 
 /// @notice DSMath library for safe math without integer overflow/underflow
-contract DSMath {
+/*
+    @audit-info
+    This Solidity smart contract is a library called DSMath, which provides various math functions 
+    that can be used by other contracts in the same Ethereum ecosystem. The functions include basic 
+    arithmetic operations like addition, subtraction, multiplication, min, and max. It also includes 
+    functions for calculating the weighted and regular division of two uint256 values. The contract 
+    also defines two constants WAD and RAY that represent 10^18 and 10^27 respectively, and are used 
+    in the weighted arithmetic calculations.
+*/
+contract DSMath { // @audit-info why not use openzepplin safe math lib. The are the same functions ?
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x + y) >= x, "ds-math-add-overflow");
+        require((z = x + y) >= x, "ds-math-add-overflow"); // @audit [gas] use error
     }
 
     function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require((z = x - y) <= x, "ds-math-sub-underflow");
+        require((z = x - y) <= x, "ds-math-sub-underflow"); // @audit [gas] use error
     }
 
     function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require(y == 0 || (z = x * y) / y == x, "ds-math-mul-overflow");
+        require(y == 0 || (z = x * y) / y == x, "ds-math-mul-overflow"); // @audit [gas] use error 
     }
 
     function min(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        return x <= y ? x : y;
+        return x <= y ? x : y; // @audit [gas] use error
     }
 
     function max(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        return x >= y ? x : y;
+        return x >= y ? x : y; // @audit [gas] use error
     }
 
     function imin(int256 x, int256 y) internal pure returns (int256 z) {
-        return x <= y ? x : y;
-    }
+        return x <= y ? x : y; // @audit [gas] use error
+    } 
 
     function imax(int256 x, int256 y) internal pure returns (int256 z) {
-        return x >= y ? x : y;
+        return x >= y ? x : y; // @audit [gas] use error
     }
 
-    uint256 constant WAD = 10 ** 18;
-    uint256 constant RAY = 10 ** 27;
+    uint256 constant WAD = 10 ** 18; 
+    uint256 constant RAY = 10 ** 27; // @audit-ok move to top of the contract
 
     function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = add(mul(x, y), WAD / 2) / WAD;
+        z = add(mul(x, y), WAD / 2) / WAD; // @audit-info can use module to divide by 2 ?
     }
 
     function rmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = add(mul(x, y), RAY / 2) / RAY;
+        z = add(mul(x, y), RAY / 2) / RAY; // @audit-info can use module to divide by 2 ?
     }
 
     function wdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = add(mul(x, WAD), y / 2) / y;
+        z = add(mul(x, WAD), y / 2) / y; // @audit-info can use module to divide by 2 ?
     }
 
     function rdiv(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        z = add(mul(x, RAY), y / 2) / y;
+        z = add(mul(x, RAY), y / 2) / y; // @audit-info can use module to divide by 2 ?
     }
 }
 
 /// @notice Events contract for logging trade activity on Rubicon Market
 /// @dev Provides the key event logs that are used in all core functionality of exchanging on the Rubicon Market
+/// @audit-info check if events can be deleted or included
 contract EventfulMarket {
-    event LogItemUpdate(uint256 id);
+    event LogItemUpdate(uint256 id); 
 
+    // @audit-ok should be removed
     /// TODO: double check it is sound logic to kill this event
     /// event LogTrade(
     ///     uint256 pay_amt,
@@ -104,6 +126,7 @@ contract EventfulMarket {
     ///     address indexed buy_gem
     /// );
 
+    // @audit-ok should be removed
     /// event LogMake(
     ///     bytes32 indexed id,
     ///     bytes32 indexed pair,
@@ -125,6 +148,7 @@ contract EventfulMarket {
         uint128 buy_amt
     );
 
+    // @audit-ok should be removed
     /// TODO: double check it is sound logic to kill this event
     /// event LogBump(
     ///     bytes32 indexed id,
@@ -137,6 +161,7 @@ contract EventfulMarket {
     ///     uint64 timestamp
     /// );
 
+    // @audit-ok should be removed
     /// event LogTake(
     ///     bytes32 id,
     ///     bytes32 indexed pair,
@@ -160,6 +185,7 @@ contract EventfulMarket {
         uint128 give_amt
     );
 
+    // @audit-ok should be removed
     /// event LogKill(
     ///     bytes32 indexed id,
     ///     bytes32 indexed pair,
@@ -181,6 +207,7 @@ contract EventfulMarket {
         uint128 buy_amt
     );
 
+    // @audit-ok should be removed
     /// TODO: double check it is sound logic to kill this event
     /// event LogInt(string lol, uint256 input);
 
@@ -215,7 +242,18 @@ contract EventfulMarket {
 
 /// @notice Core trading logic for ERC-20 pairs, an orderbook, and transacting of tokens
 /// @dev This contract holds the core ERC-20 / ERC-20 offer, buy, and cancel logic
+/*
+    @audit-info
+    This is a smart contract called "SimpleMarket" which is used for creating a decentralized exchange (DEX) 
+    in the Ethereum network. The contract holds an orderbook that consists of buy and sell offers for 
+    different ERC20 tokens. It allows users to buy and sell these tokens by placing an offer in the orderbook,
+    and then fulfilling an existing order that matches their needs. The contract has a feeBPS parameter 
+    that represents the fees charged by the exchange, and a feeTo parameter that represents the address 
+    where these fees are sent. 
+    The contract has several functions for creating, canceling, and buying offers from the orderbook.
+*/
 contract SimpleMarket is EventfulMarket, DSMath {
+    // @audit-info check if slots can be optimized
     uint256 public last_offer_id;
 
     /// @dev The mapping that makes up the core orderbook of the exchange
@@ -231,6 +269,7 @@ contract SimpleMarket is EventfulMarket, DSMath {
 
     bytes32 internal constant MAKER_FEE_SLOT = keccak256("WOB_MAKER_FEE");
 
+    // @audit-info can be gas optimized ?
     struct OfferInfo {
         uint256 pay_amt;
         ERC20 pay_gem;
@@ -243,26 +282,27 @@ contract SimpleMarket is EventfulMarket, DSMath {
 
     /// @notice Modifier that insures an order exists and is properly in the orderbook
     modifier can_buy(uint256 id) virtual {
-        require(isActive(id));
-        _;
+        require(isActive(id)); // @audit-ok should have require description
+        _; 
     }
 
     // /// @notice Modifier that checks the user to make sure they own the offer and its valid before they attempt to cancel it
     modifier can_cancel(uint256 id) virtual {
-        require(isActive(id));
-        require(
-            (msg.sender == getOwner(id)) ||
+        require(isActive(id)); // @audit-ok  should have require description
+        require( // @audit-ok  should have require description
+            (msg.sender == getOwner(id)) || // @audit-ok should split requires
                 (msg.sender == getRecipient(id) && getOwner(id) == address(0))
         );
         _;
     }
 
-    modifier can_offer() virtual {
+    modifier can_offer() virtual { // @audit-ok delete modifier there is no validation
         _;
     }
 
-    modifier synchronized() {
-        require(!locked);
+    // @audit-ok use open zepplin reentrancy guard instead 
+    modifier synchronized() { 
+        require(!locked);  // @audit-ok  should have require description
         locked = true;
         _;
         locked = false;
@@ -294,7 +334,8 @@ contract SimpleMarket is EventfulMarket, DSMath {
 
     /// @notice Below are the main public entrypoints
 
-    function bump(bytes32 id_) external can_buy(uint256(id_)) {
+    // @audit-info function not used anywhere can be deleted
+    function bump(bytes32 id_) external can_buy(uint256(id_)) { // @audit-info @why not be uint256 instead of bytes32 
         uint256 id = uint256(id_);
         /// TODO: double check it is sound logic to kill this event
         /// emit LogBump(
@@ -318,10 +359,11 @@ contract SimpleMarket is EventfulMarket, DSMath {
         OfferInfo memory _offer = offers[id];
         uint256 spend = mul(quantity, _offer.buy_amt) / _offer.pay_amt;
 
-        require(uint128(spend) == spend, "spend is not an int");
+        require(uint128(spend) == spend, "spend is not an int");/// @audit [gas] use error instead of require
         require(uint128(quantity) == quantity, "quantity is not an int");
 
         ///@dev For backwards semantic compatibility.
+        /// @audit [gas] split the ifs 
         if (
             quantity == 0 ||
             spend == 0 ||
@@ -331,22 +373,25 @@ contract SimpleMarket is EventfulMarket, DSMath {
             return false;
         }
 
+        /// @audit [gas] copy storage variable to memory
         offers[id].pay_amt = sub(_offer.pay_amt, quantity);
         offers[id].buy_amt = sub(_offer.buy_amt, spend);
 
         /// @dev Fee logic added on taker trades
         uint256 fee = mul(spend, feeBPS) / 100_000;
+        /// @audit [gas] use error
         require(
             _offer.buy_gem.transferFrom(msg.sender, feeTo, fee),
             "Insufficient funds to cover fee"
         );
 
         // taker pay maker 0_0
-        if (makerFee() > 0) {
+        if (makerFee() > 0) { /// @audit [gas] use != 0
             uint256 mFee = mul(spend, makerFee()) / 100_000;
 
             /// @dev Handle the v1 -> v2 migration case where if owner == address(0) we transfer this fee to _offer.recipient
-            if (_offer.owner == address(0) && getRecipient(id) != address(0)) {
+            if (_offer.owner == address(0) && getRecipient(id) != address(0)) { /// @audit [gas] split ifs
+                /// @audit [gas] use error
                 require(
                     _offer.buy_gem.transferFrom(
                         msg.sender,
@@ -356,6 +401,7 @@ contract SimpleMarket is EventfulMarket, DSMath {
                     "Insufficient funds to cover fee"
                 );
             } else {
+                /// @audit [gas] use error
                 require(
                     _offer.buy_gem.transferFrom(msg.sender, _offer.owner, mFee),
                     "Insufficient funds to cover fee"
@@ -371,11 +417,13 @@ contract SimpleMarket is EventfulMarket, DSMath {
                 mFee
             );
         }
+        /// @audit [gas] use error
         require(
             _offer.buy_gem.transferFrom(msg.sender, _offer.recipient, spend),
             "_offer.buy_gem.transferFrom(msg.sender, _offer.recipient, spend) failed - check that you can pay the fee"
         );
 
+        /// @audit [gas] use error
         require(
             _offer.pay_gem.transfer(msg.sender, quantity),
             "_offer.pay_gem.transfer(msg.sender, quantity) failed"
@@ -383,6 +431,7 @@ contract SimpleMarket is EventfulMarket, DSMath {
 
         emit LogItemUpdate(id);
 
+        // @audit-ok remove unused log
         /// emit LogTake(
         ///     bytes32(id),
         ///     keccak256(abi.encodePacked(_offer.pay_gem, _offer.buy_gem)),
@@ -406,6 +455,7 @@ contract SimpleMarket is EventfulMarket, DSMath {
             uint128(spend)
         );
 
+        // @audit-ok remove unused log
         /// emit FeeTake(
         ///     bytes32(id),
         ///     keccak256(abi.encodePacked(_offer.pay_gem, _offer.buy_gem)),
@@ -425,6 +475,7 @@ contract SimpleMarket is EventfulMarket, DSMath {
             fee
         );
 
+        // @audit-ok remove unused log
         /// TODO: double check it is sound logic to kill this event
         /// emit LogTrade(
         ///     quantity,
@@ -434,8 +485,8 @@ contract SimpleMarket is EventfulMarket, DSMath {
         /// );
 
         if (offers[id].pay_amt == 0) {
-            delete offers[id];
-            /// emit OfferDeleted(bytes32(id));
+            delete offers[id]; /// @audit-info [gas] check if its better to delete or set as 0
+            /// emit OfferDeleted(bytes32(id)); // @audit-ok remove unused log
 
             emit emitDelete(
                 bytes32(id),
@@ -451,16 +502,18 @@ contract SimpleMarket is EventfulMarket, DSMath {
     /// @notice This function refunds the offer to the maker.
     function cancel(
         uint256 id
-    ) public virtual can_cancel(id) synchronized returns (bool success) {
+    ) public virtual can_cancel(id) synchronized returns (bool success) { // @audit-ok there is not check for reentrancy
         OfferInfo memory _offer = offers[id];
-        delete offers[id];
+        delete offers[id]; // @audit-info [gas] delete or set offer to 0 ?
 
         /// @dev V1 orders after V2 upgrade will point to address(0) in owner
+        /// @audit-ok move 
         _offer.owner == address(0) && msg.sender == _offer.recipient
             ? require(_offer.pay_gem.transfer(_offer.recipient, _offer.pay_amt))
             : require(_offer.pay_gem.transfer(_offer.owner, _offer.pay_amt));
 
         emit LogItemUpdate(id);
+        // @audit-ok remove unused event
         /// emit LogKill(
         ///     bytes32(id),
         ///     keccak256(abi.encodePacked(_offer.pay_gem, _offer.buy_gem)),
@@ -484,10 +537,12 @@ contract SimpleMarket is EventfulMarket, DSMath {
         success = true;
     }
 
-    function kill(bytes32 id) external virtual {
+    // @audit-ok missing NatSped description
+    function kill(bytes32 id) external virtual { // @audit-info why not uint256 instead of bytes32
         require(cancel(uint256(id)));
     }
 
+    // @audit-ok missing NatSped description
     function make(
         ERC20 pay_gem,
         ERC20 buy_gem,
@@ -516,7 +571,9 @@ contract SimpleMarket is EventfulMarket, DSMath {
         address owner,
         address recipient
     ) public virtual can_offer synchronized returns (uint256 id) {
-        require(uint128(pay_amt) == pay_amt);
+        /// @audit [gas] use error
+        // @audit-ok should have require description
+        require(uint128(pay_amt) == pay_amt); 
         require(uint128(buy_amt) == buy_amt);
         require(pay_amt > 0);
         require(pay_gem != ERC20(address(0))); /// @dev Note, modified from: require(pay_gem != ERC20(0x0)) which compiles in 0.7.6
@@ -535,10 +592,12 @@ contract SimpleMarket is EventfulMarket, DSMath {
         id = _next_id();
         offers[id] = info;
 
-        require(pay_gem.transferFrom(msg.sender, address(this), pay_amt));
+        /// @audit [gas] use error
+        require(pay_gem.transferFrom(msg.sender, address(this), pay_amt)); // @audit-ok shoudl have require description
 
         emit LogItemUpdate(id);
 
+        // @audit-ok remove
         /// emit LogMake(
         ///     bytes32(id),
         ///     keccak256(abi.encodePacked(pay_gem, buy_gem)),
@@ -566,7 +625,7 @@ contract SimpleMarket is EventfulMarket, DSMath {
     }
 
     function _next_id() internal returns (uint256) {
-        last_offer_id++;
+        last_offer_id++; /// @audit-info [gas] can be unchecked ?
         return last_offer_id;
     }
 
@@ -580,7 +639,7 @@ contract SimpleMarket is EventfulMarket, DSMath {
     ) public view returns (uint256 _amount) {
         require(amount > 0);
         _amount = amount;
-        _amount -= mul(amount, feeBPS) / 100_000;
+        _amount -= mul(amount, feeBPS) / 100_000; /// @audit-ok [low] transform duplicated numberin constant ?
 
         if (makerFee() > 0) {
             _amount -= mul(amount, makerFee()) / 100_000;
@@ -590,25 +649,35 @@ contract SimpleMarket is EventfulMarket, DSMath {
 
 /// @notice Expiring market is a Simple Market with a market lifetime.
 /// @dev When the close_time has been reached, offers can only be cancelled (offer and buy will throw).
+/*
+    @audit-info 
+    This is a Solidity smart contract called ExpiringMarket which extends from the SimpleMarket contract.
+     It allows users to make offers and buy items until the close time is reached. After that, new offers 
+     are not allowed and only offers can be canceled. The contract has three modifiers: can_offer, 
+     can_buy, and can_cancel which control who can make offers, buy items, and cancel offers respectively. 
+     There is also a function called stop which can be called by an authorized user to stop the contract.
+ */
 contract ExpiringMarket is DSAuth, SimpleMarket {
     bool public stopped;
 
     /// @dev After close_time has been reached, no new offers are allowed.
     modifier can_offer() override {
-        require(!isClosed());
+        require(!isClosed()); // @audit-ok should have require description 
         _;
     }
 
     /// @dev After close, no new buys are allowed.
-    modifier can_buy(uint256 id) override {
-        require(isActive(id));
-        require(!isClosed());
+    modifier can_buy(uint256 id) override { // @audit-info why override ?
+        require(isActive(id));  // @audit-ok should have require description 
+        require(!isClosed());  // @audit-ok should have require description 
         _;
     }
 
     /// @dev After close, anyone can cancel an offer.
-    modifier can_cancel(uint256 id) virtual override {
-        require(isActive(id));
+    modifier can_cancel(uint256 id) virtual override { // @audit-info why override ?
+        require(isActive(id));  // @audit-ok should have require description 
+        // @audit-ok should have require description 
+        // @audit-ok split all requires to be more readable
         require(
             (msg.sender == getOwner(id)) ||
                 isClosed() ||
@@ -622,7 +691,7 @@ contract ExpiringMarket is DSAuth, SimpleMarket {
     }
 
     function getTime() public view returns (uint64) {
-        return uint64(block.timestamp);
+        return uint64(block.timestamp); // @audit-log why use uint64 uint256 will save gas ?
     }
 
     function stop() external auth {
@@ -658,6 +727,8 @@ contract DSNote {
 }
 
 contract MatchingEvents {
+    // @audit-ok delete unused events
+    // @audit-ok add indexed event
     /// event LogBuyEnabled(bool isEnabled); /// TODO: this event is not used in the contract, remove?
     event LogMinSell(address pay_gem, uint256 min_amount);
     /// event LogMatchingEnabled(bool isEnabled); /// TODO: this event is not used in the contract, remove?
@@ -717,8 +788,9 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
 
     // // After close, anyone can cancel an offer
     modifier can_cancel(uint256 id) override {
+        // @audit-ok there are multiple duplicated requirements how can be refactored? 
         require(isActive(id), "Offer was deleted or taken, or never existed.");
-        require(
+        require( // @audit-ok split in differents requires with error description
             isClosed() ||
                 msg.sender == getOwner(id) ||
                 id == dustId ||
@@ -730,6 +802,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
 
     // ---- Public entrypoints ---- //
 
+    // @audit-info this func is used in 2 contracts can be refactored ?
     function make(
         ERC20 pay_gem,
         ERC20 buy_gem,
@@ -821,6 +894,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
             );
     }
 
+    // @audit-ok functions whti same name
     function offer(
         uint256 pay_amt, //maker (ask) sell how much
         ERC20 pay_gem, //maker (ask) sell which token
@@ -831,8 +905,8 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         address owner, // owner of the offer
         address recipient // recipient of the offer's fill
     ) public can_offer returns (uint256) {
-        require(!locked, "Reentrancy attempt");
-        require(_dust[address(pay_gem)] <= pay_amt);
+        require(!locked, "Reentrancy attempt"); // @audit use error
+        require(_dust[address(pay_gem)] <= pay_amt); // @audit use error
 
         /// @dev currently matching is perma-enabled
         // if (matchingEnabled) {
@@ -871,7 +945,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
     function cancel(
         uint256 id
     ) public override can_cancel(id) returns (bool success) {
-        require(!locked, "Reentrancy attempt");
+        require(!locked, "Reentrancy attempt");  // @audit use error
         if (matchingEnabled) {
             if (isOfferSorted(id)) {
                 require(_unsort(id));
@@ -890,12 +964,14 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         uint[] calldata buyAmts,
         address[] calldata buyGems
     ) external {
+        // split in diferrent requires
         require(
             payAmts.length == payGems.length &&
                 payAmts.length == buyAmts.length &&
                 payAmts.length == buyGems.length,
             "Array lengths do not match"
         );
+        // @audit-ok bad approach it can grow exponentialy
         for (uint i = 0; i < payAmts.length; i++) {
             this.offer(
                 payAmts[i],
@@ -907,6 +983,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
     }
 
     /// @notice Cancel multiple offers in a single transaction
+    // @audit-ok bad approach it can grow exponentialy can do the forloop off-chain and then just call cancel ?
     function batchCancel(uint[] calldata ids) external {
         for (uint i = 0; i < ids.length; i++) {
             cancel(ids[i]);
@@ -914,6 +991,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
     }
 
     /// @notice Update outstanding offers to new offers, in a batch, in a single transaction
+    // @audit-ok bad approach it can grow exponentialy can do the forloop off-chain and then just call cancel ?
     function batchRequote(
         uint[] calldata ids,
         uint[] calldata payAmts,
@@ -935,8 +1013,11 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
     //deletes _rank [id]
     //  Function should be called by keepers.
     function del_rank(uint256 id) external returns (bool) {
+        // @audit-ok require description
+        // @audit-ok error statmente
         require(!locked);
 
+        // @audit-ok split the requires
         require(
             !isActive(id) &&
                 _rank[id].delb != 0 &&
@@ -1034,6 +1115,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         require(!locked);
 
         uint256 offerId;
+        // @audit-info to hard to read while its a bad approach ?
         while (pay_amt > 0) {
             //while there is amount to sell
             offerId = getBestOffer(buy_gem, pay_gem); //Get the best offer for the token pair
@@ -1074,7 +1156,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
     ) external returns (uint256 fill_amt) {
         require(!locked);
         uint256 offerId;
-        while (buy_amt > 0) {
+        while (buy_amt > 0) { // @audit-info while its a bad appraoch ?
             //Meanwhile there is amount to buy
             offerId = getBestOffer(buy_gem, pay_gem); //Get the best offer for the token pair
             require(offerId != 0, "offerId == 0");
@@ -1084,7 +1166,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
                 mul(buy_amt, 1 ether) <
                 wdiv(offers[offerId].pay_amt, offers[offerId].buy_amt)
             ) {
-                break; //We consider that all amount is sold
+                break; //We consider that all amount is sold // @audit-info what is break ?
             }
             if (buy_amt >= offers[offerId].pay_amt) {
                 //If amount to buy is higher or equal than current offer amount to sell
@@ -1107,7 +1189,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         require(
             fill_amt <= max_fill_amount,
             "fill_amt exceeds max_fill_amount"
-        );
+        ); // @audit use error statment
         fill_amt = calcAmountAfterFee(fill_amt);
     }
 
@@ -1127,7 +1209,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         uint256 pay_amt
     ) public view returns (uint256 fill_amt) {
         uint256 offerId = getBestOffer(buy_gem, pay_gem); //Get best offer for the token pair
-        while (pay_amt > offers[offerId].buy_amt) {
+        while (pay_amt > offers[offerId].buy_amt) { // @audit-info while is a bad approach ?
             fill_amt = add(fill_amt, offers[offerId].pay_amt); //Add amount to buy accumulator
             pay_amt = sub(pay_amt, offers[offerId].buy_amt); //Decrease amount to pay
             if (pay_amt > 0) {
@@ -1160,7 +1242,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         uint256 buy_amt
     ) public view returns (uint256 fill_amt) {
         uint256 offerId = getBestOffer(buy_gem, pay_gem); //Get best offer for the token pair
-        while (buy_amt > offers[offerId].pay_amt) {
+        while (buy_amt > offers[offerId].pay_amt) {  // @audit-info while is a bad approach ?
             fill_amt = add(fill_amt, offers[offerId].buy_amt); //Add amount to pay accumulator
             buy_amt = sub(buy_amt, offers[offerId].pay_amt); //Decrease amount to buy
             if (buy_amt > 0) {
@@ -1181,7 +1263,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
     // ---- Internal Functions ---- //
 
     function _buys(uint256 id, uint256 amount) internal returns (bool) {
-        require(buyEnabled);
+        require(buyEnabled); // @audit-ok require description and use error statment
         if (amount == offers[id].pay_amt) {
             if (isOfferSorted(id)) {
                 //offers[id] must be removed from sorted list because all of it is bought
@@ -1191,9 +1273,9 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
             }
         }
 
-        require(super.buy(id, amount));
+        require(super.buy(id, amount)); // @audit-ok require description and use error statment
 
-        // If offer has become dust during buy, we cancel it
+        // If offer has become dust during buy, we cancel it // @audit [gas] split the ifs
         if (
             isActive(id) &&
             offers[id].pay_amt < _dust[address(offers[id].pay_gem)]
@@ -1214,7 +1296,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         uint256 old_top = 0;
 
         // Find the larger-than-id order whose successor is less-than-id.
-        while (top != 0 && _isPricedLtOrEq(id, top)) {
+        while (top != 0 && _isPricedLtOrEq(id, top)) { // @audit-info while its a a bad approach ?
             old_top = top;
             top = _rank[top].prev;
         }
@@ -1226,7 +1308,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         require(id > 0);
 
         // Look for an active order.
-        while (pos != 0 && !isActive(pos)) {
+        while (pos != 0 && !isActive(pos)) {  // @audit-info while its a a bad approach ?
             pos = _rank[pos].prev;
         }
 
@@ -1286,7 +1368,7 @@ contract RubiconMarket is MatchingEvents, ExpiringMarket, DSNote {
         uint256 m_pay_amt; //maker offer wants to sell this much token
 
         // there is at least one offer stored for token pair
-        while (_best[address(t_buy_gem)][address(t_pay_gem)] > 0) {
+        while (_best[address(t_buy_gem)][address(t_pay_gem)] > 0) { // @audit-info while its a a bad approach ?
             best_maker_id = _best[address(t_buy_gem)][address(t_pay_gem)];
             m_buy_amt = offers[best_maker_id].buy_amt;
             m_pay_amt = offers[best_maker_id].pay_amt;

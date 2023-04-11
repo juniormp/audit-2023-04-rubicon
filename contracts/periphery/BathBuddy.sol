@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.0; // @audit-ok do not use ^
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -73,7 +73,7 @@ contract BathBuddy is ReentrancyGuard, IBathBuddy, Pausable {
         address newBud,
         address _bathHouse
     ) external {
-        require(!friendshipStarted, "I already have a buddy!");
+        require(!friendshipStarted, "I already have a buddy!"); // @audit use error intead
         owner = _owner;
         myBathTokenBuddy = newBud;
         bathHouse = _bathHouse;
@@ -85,8 +85,8 @@ contract BathBuddy is ReentrancyGuard, IBathBuddy, Pausable {
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
+        require(msg.sender == owner); //use open zepplin ownable lib 
+        _; 
     }
 
     // TODO: do we need this?
@@ -129,7 +129,7 @@ contract BathBuddy is ReentrancyGuard, IBathBuddy, Pausable {
                 lastTimeRewardApplicable(token)
                     .sub(lastUpdateTime[token])
                     .mul(rewardRates[token])
-                    .mul(1e18)
+                    .mul(1e18) // @audit use 1 eth
                     .div(IERC20(myBathTokenBuddy).totalSupply())
             );
     }
@@ -140,8 +140,8 @@ contract BathBuddy is ReentrancyGuard, IBathBuddy, Pausable {
         address account,
         address token
     ) public view override returns (uint256) {
-        require(friendshipStarted, "I have not started a bathToken friendship");
-
+        require(friendshipStarted, "I have not started a bathToken friendship"); // @audit use error intead
+ 
         return
             IERC20(myBathTokenBuddy) // Care with this?
                 .balanceOf(account)
@@ -218,7 +218,7 @@ contract BathBuddy is ReentrancyGuard, IBathBuddy, Pausable {
             rewardRates[address(rewardsToken)] <=
                 balance.div(rewardsDuration[address(rewardsToken)]),
             "Provided reward too high"
-        );
+        ); // @audit use error intead
 
         lastUpdateTime[address(rewardsToken)] = block.timestamp;
         periodFinish[address(rewardsToken)] = block.timestamp.add(
@@ -236,7 +236,7 @@ contract BathBuddy is ReentrancyGuard, IBathBuddy, Pausable {
         require(
             block.timestamp > periodFinish[token],
             "Previous rewards period must be complete before changing the duration for the new period"
-        );
+        ); // @audit use error intead
         rewardsDuration[token] = _rewardsDuration;
         emit RewardsDurationUpdated(rewardsDuration[token]);
     }
@@ -257,6 +257,8 @@ contract BathBuddy is ReentrancyGuard, IBathBuddy, Pausable {
     }
 
     /* ========== EVENTS ========== */
+
+    // @audit move events to top
 
     event RewardAdded(uint256 reward);
     event Staked(address indexed user, uint256 amount);

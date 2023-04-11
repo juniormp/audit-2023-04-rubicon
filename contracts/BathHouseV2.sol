@@ -9,6 +9,10 @@ import "./compound-v2-fork/Unitroller.sol";
 import "./periphery/BathBuddy.sol";
 
 // G D Em A G/F C Cm Cm6 Am B G7 <- fortissimo
+/* 
+    @audit-ok incorrect use of NatSpec
+    few functions without comments, wrong comments, missing parts of the comments
+*/
 contract BathHouseV2 {
     /// @notice unitroller's address
     Comptroller public comptroller;
@@ -20,17 +24,18 @@ contract BathHouseV2 {
     mapping(address => address) private tokenToBathToken;
     mapping(address => address) private bathTokenToBuddy;
 
+    // @audit-ok use indexes
     event BathTokenCreated(address bathToken, address underlying);
     event BuddySpawned(address bathToken, address bathBuddy);
 
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "onlyAdmin: !admin");
+    modifier onlyAdmin() { // @audit-ok use oppen zepplin ownable
+        require(msg.sender == admin, "onlyAdmin: !admin"); // @audit [gas] use error
         _;
     }
 
     // proxy-constructor
     function initialize(address _comptroller, address _pAdmin) external {
-        require(!initialized, "BathHouseV2 already initialized!");
+        require(!initialized, "BathHouseV2 already initialized!"); // @audit [gas] use error
         comptroller = Comptroller(_comptroller);
         admin = msg.sender;
         proxyAdmin = _pAdmin;
@@ -44,7 +49,7 @@ contract BathHouseV2 {
     /// system based on its corresponding underlying asset
     function getBathTokenFromAsset(
         address asset
-    ) public view returns (address) {
+    ) public view returns (address) { // @audit-ok can be changed to external since the function is not being used inside the contract
         return tokenToBathToken[asset];
     }
 
@@ -67,15 +72,15 @@ contract BathHouseV2 {
         // underlying can be used only for one bathToken
         require(
             tokenToBathToken[underlying] == address(0),
-            "createBathToken: BATHTOKEN WITH THIS ERC20 EXIST ALDREADY"
+            "createBathToken: BATHTOKEN WITH THIS ERC20 EXIST ALDREADY"  // @audit [gas] use error
         );
         require(
             underlying != address(0),
-            "createBathToken: UNDERLYING == ADDRESS 0"
+            "createBathToken: UNDERLYING == ADDRESS 0"  // @audit [gas] use error
         );
         require(
             implementation != address(0),
-            "createBathToken: IMPLEMENTATION == ADDRESS 0"
+            "createBathToken: IMPLEMENTATION == ADDRESS 0"  // @audit [gas] use error
         );
 
         // get bathToken metadata that semantically reflects underlying ERC20
@@ -119,7 +124,8 @@ contract BathHouseV2 {
         // claim rewards from comptroller
         comptroller.claimComp(msg.sender);
         // get rewards from bathBuddy
-        for (uint256 i = 0; i < buddies.length; ++i) {
+        // @audit-info for its a bad approach ?
+        for (uint256 i = 0; i < buddies.length; ++i) { // @audit use unchecked  
             IBathBuddy(buddies[i]).getReward(
                 IERC20(rewardsTokens[i]),
                 msg.sender
@@ -141,7 +147,7 @@ contract BathHouseV2 {
         view
         returns (string memory _name, string memory _symbol, uint8 _decimals)
     {
-        require(_underlying != address(0), "_bathify: ADDRESS ZERO");
+        require(_underlying != address(0), "_bathify: ADDRESS ZERO");  // @audit [gas] use error
 
         _name = string.concat("bath", ERC20(_underlying).symbol());
         _symbol = string.concat(_name, "v2");

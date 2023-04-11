@@ -13,6 +13,7 @@ interface IBathToken is IERC20 {
     function underlyingToken() external view returns(IERC20);
 }
 
+// @audit-ok incorrect use of NatSpec
 /// @notice Migratoooooooor
 contract V2Migrator {
     /// @notice old bathToken -> new bathToken
@@ -28,7 +29,8 @@ contract V2Migrator {
     /// @dev underlying tokens should be the same for corresponding pools
     /// i.e. USDC -> USDC, WETH -> WETH, etc.
     constructor(address[] memory bathTokensV1, address[] memory bathTokensV2) {
-        for (uint256 i = 0; i < bathTokensV1.length; ++i) {
+        // @audit-info [gas] this for can be avoided ?
+        for (uint256 i = 0; i < bathTokensV1.length; ++i) { // @audit-info for its a a bad approach ?
             // set v1 to v2 bathTokens
             v1ToV2Pools[bathTokensV1[i]] = bathTokensV2[i];
         }
@@ -38,7 +40,7 @@ contract V2Migrator {
     function migrate(IBathToken bathTokenV1) external {
         //////////////// V1 WITHDRAWAL ////////////////
         uint256 bathBalance = bathTokenV1.balanceOf(msg.sender);
-        require(bathBalance > 0, "migrate: ZERO AMOUNT");
+        require(bathBalance > 0, "migrate: ZERO AMOUNT"); /// @audit [gas] use error
 
         /// @dev approve first
         bathTokenV1.transferFrom(msg.sender, address(this), bathBalance);
@@ -53,16 +55,16 @@ contract V2Migrator {
         underlying.approve(bathTokenV2, amountWithdrawn);
         require(
             CErc20Interface(bathTokenV2).mint(amountWithdrawn) == 0,
-            "migrate: MINT FAILED"
+            "migrate: MINT FAILED" /// @audit [gas] use error
         );
         /// @dev v2 bathTokens shouldn't be sent to this contract from anywhere other than this function
         IERC20(bathTokenV2).transfer(
             msg.sender,
             IERC20(bathTokenV2).balanceOf(address(this))
-        );
+        ); 
         require(
             IERC20(bathTokenV2).balanceOf(address(this)) == 0,
-            "migrate: BATH TOKENS V2 STUCK IN THE CONTRACT"
+            "migrate: BATH TOKENS V2 STUCK IN THE CONTRACT" /// @audit [gas] use error
         );
 
         emit Migrated(
